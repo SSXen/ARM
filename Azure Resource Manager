@@ -2,29 +2,54 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "Modupe_VirtualNet": {
+        "Modupe_VirtualNet1": {
 
             "defaultValue": "ModupeVnet",
             "type": "string",
             "metadata": {
                 "description": "Virtual Network"
             }
+        },
+         "Modupe_VirtualNet02": {
+
+            "defaultValue": "ModupeVnet",
+            "type": "string",
+            "metadata": {
+                "description": "Virtual Network"
+            }
+        },
+        "MVNet1_location": {
+            
+            "defaultValue": "West",
+            "type": "string",
+            "metadata": {
+                "description": "Virtual Network1 location"
+            }
+        },
+        "MVNet2_location": {
+            
+            "defaultValue": "South",
+            "type": "string",
+            "metadata": {
+                "description": "Virtual Network2 location "
+            }
         }
+    
     },
     "functions": [],
     "variables": {
-        "Subnet1": "ModupeSubnet1",
-        "Subnet2": "ModupeSubnet2"
+        "Subnet1": "Modupe1",
+        "Subnet2": "ModupeHouse1"
     },
     "resources": [
         {
-            "name": "[parameters('Modupe_VirtualNet')]",
+            "name": "[parameters('Modupe_VirtualNet1')]",
             "type": "Microsoft.Network/virtualNetworks",
             "apiVersion": "2023-04-01",
 
             "location": "[resourceGroup().location]",
             "tags": {
-                "displayName": "[parameters('Modupe_VirtualNet')]"
+                "displayName": "[parameters('Modupe_VirtualNet1')]"
             },
             "properties": {
                 "addressSpace": {
@@ -56,9 +81,9 @@
         {
             "type": "Microsoft.Network/virtualNetworks/subnets",
             "apiVersion": "2020-11-01",
-            "name": "[concat(parameters('Modupe_VirtualNet'), '/MerciSubnet1')]",
+            "name": "[concat(parameters('Modupe_VirtualNet1'), '/MerciSubnet1')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet'))]"
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet1'))]"
             ],
             "properties": {
                 "addressPrefix": "10.0.0.0/24",
@@ -70,9 +95,9 @@
         {
             "type": "Microsoft.Network/virtualNetworks/subnets",
             "apiVersion": "2020-11-01",
-            "name": "[concat(parameters('Modupe_VirtualNet'), '/MerciSubnet2')]",
+            "name": "[concat(parameters('Modupe_VirtualNet1'), '/MerciSubnet2')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet'))]"
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet1'))]"
             ],
             "properties": {
                 "addressPrefix": "10.0.1.0/24",
