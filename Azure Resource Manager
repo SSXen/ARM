@@ -3,51 +3,49 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "Modupe_VirtualNet1": {
-
             "defaultValue": "ModupeVnet",
             "type": "string",
             "metadata": {
-                "description": "Virtual Network"
+                "description": "Virtual Network 1"
             }
         },
-         "Modupe_VirtualNet02": {
-
-            "defaultValue": "ModupeVnet",
+        "Modupe_VirtualNet2": {
+            "defaultValue": "ModupeVnet2",
             "type": "string",
             "metadata": {
-                "description": "Virtual Network"
+                "description": "Virtual Network 2"
             }
         },
         "MVNet1_location": {
-            
             "defaultValue": "West",
             "type": "string",
             "metadata": {
-                "description": "Virtual Network1 location"
+                "description": "Virtual Network 1 location"
             }
         },
         "MVNet2_location": {
-            
             "defaultValue": "South",
             "type": "string",
             "metadata": {
-                "description": "Virtual Network2 location "
+                "description": "Virtual Network 2 location"
             }
         }
-    
     },
     "functions": [],
     "variables": {
         "Subnet1": "Modupe1",
-        "Subnet2": "ModupeHouse1"
+        "Subnet2": "ModupeHouse1",
+        "vpnGatewayName1": "[concat(parameters('Modupe_VirtualNet1'), '-Modgateway')]",
+        "vpnGatewayName2": "[concat(parameters('Modupe_VirtualNet2'), '-Housegateway')]",
+        "nsgName1": "[concat(parameters('Modupe_VirtualNet1'), '-1stnsg')]",
+        "nsgName2": "[concat(parameters('Modupe_VirtualNet2'), '-2ndnsg')]"
     },
     "resources": [
         {
             "name": "[parameters('Modupe_VirtualNet1')]",
             "type": "Microsoft.Network/virtualNetworks",
             "apiVersion": "2023-04-01",
-
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('MVNet1_location')]",
             "tags": {
                 "displayName": "[parameters('Modupe_VirtualNet1')]"
             },
@@ -61,7 +59,10 @@
                     {
                         "name": "[variables('Subnet1')]",
                         "properties": {
-                            "addressPrefix": "10.0.0.0/24"
+                            "addressPrefix": "10.0.0.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName1'))]"
+                            }
                         }
                     },
                     {
@@ -69,42 +70,148 @@
                         "properties": {
                             "addressPrefix": "10.0.1.0/24",
                             "delegations": [],
-                            "privateEndpointNetworkPolicies": "Disabled"
-
+                            "privateEndpointNetworkPolicies": "Disabled",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName1'))]"
+                            }
                         }
                     }
                 ],
-                "virtualNetworkPeerings": [],
-                "enableDdosProtection": false
+                "virtualNetworkPeerings": [
+                    {
+                        "name": "[concat(parameters('Modupe_VirtualNet1'), '-to-', parameters('Modupe_VirtualNet2'))]",
+                        "properties": {
+                            "remoteVirtualNetwork": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet2'))]"
+                            },
+                            "allowForwardedTraffic": false,
+                            "allowGatewayTransit": false,
+                            "allowVirtualNetworkAccess": true,
+                            "useRemoteGateways": false
+                        }
+                    }
+                ]
             }
         },
         {
-            "type": "Microsoft.Network/virtualNetworks/subnets",
-            "apiVersion": "2020-11-01",
-            "name": "[concat(parameters('Modupe_VirtualNet1'), '/MerciSubnet1')]",
+            "name": "[variables('vpnGatewayName1')]",
+            "type": "Microsoft.Network/vpnGateways",
+            "apiVersion": "2023-04-01",
+            "location": "[parameters('MVNet1_location')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet1'))]"
             ],
             "properties": {
-                "addressPrefix": "10.0.0.0/24",
-                "delegations": [],
-                "privateEndpointNetworkPolicies": "Disabled",
-                "privateLinkServiceNetworkPolicies": "Enabled"
+                "vpnType": "RouteBased",
+                "vpnGatewayGeneration": "Generation1",
+                "sku": {
+                    "name": "VpnGw1",
+                    "tier": "VpnGw1"
+                },
+                "ipConfigurations": [
+                    {
+                        "name": "gwipconfig",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('Modupe_VirtualNet1'), variables('Subnet1'))]"
+                            }
+                        }
+                    }
+                ]
             }
         },
         {
-            "type": "Microsoft.Network/virtualNetworks/subnets",
-            "apiVersion": "2020-11-01",
-            "name": "[concat(parameters('Modupe_VirtualNet1'), '/MerciSubnet2')]",
+            "name": "[variables('nsgName1')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2023-04-01",
+            "location": "[parameters('MVNet1_location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "AllowAllInbound",
+                        "properties": {
+                            "description": "Allow all inbound traffic",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('Modupe_VirtualNet2')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2023-04-01",
+            "location": "[parameters('MVNet2_location')]",
+            "tags": {
+                "displayName": "[parameters('Modupe_VirtualNet2')]"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.1.0.0/16"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('Subnet1')]",
+                        "properties": {
+                            "addressPrefix": "10.1.0.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName2'))]"
+                            }
+                        }
+                    }
+                ],
+                "virtualNetworkPeerings": [
+                    {
+                        "name": "[concat(parameters('Modupe_VirtualNet2'), '-to-', parameters('Modupe_VirtualNet1'))]",
+                        "properties": {
+                            "remoteVirtualNetwork": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet1'))]"
+                            },
+                            "allowForwardedTraffic": false,
+                            "allowGatewayTransit": false,
+                            "allowVirtualNetworkAccess": true,
+                            "useRemoteGateways": false
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('vpnGatewayName2')]",
+            "type": "Microsoft.Network/vpnGateways",
+            "apiVersion": "2023-04-01",
+            "location": "[parameters('MVNet2_location')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet1'))]"
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet2'))]"
             ],
             "properties": {
-                "addressPrefix": "10.0.1.0/24",
-                "delegations": [],
-                "privateEndpointNetworkPolicies": "Disabled",
-                "privateLinkServiceNetworkPolicies": "Enabled"
+                "vpnType": "RouteBased",
+                "vpnGatewayGeneration": "Generation1",
+                "sku": {
+                    "name": "VpnGw1",
+                    "tier": "VpnGw1"
+                },
+                "ipConfigurations": [
+                    {
+                        "name": "gwipconfig",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('Modupe_VirtualNet2'), variables('Subnet1'))]"
+                            }
+                        }
+                    }
+                ]
             }
         }
     ]
 }
+      
