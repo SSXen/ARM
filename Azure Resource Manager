@@ -1,3 +1,4 @@
+json
 {
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
@@ -29,6 +30,18 @@
             "metadata": {
                 "description": "Virtual Network 2 location"
             }
+        },
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "Admin username for VMs"
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Admin password for VMs"
+            }
         }
     },
     "functions": [],
@@ -38,10 +51,17 @@
         "vpnGatewayName1": "[concat(parameters('Modupe_VirtualNet1'), '-Modgateway')]",
         "vpnGatewayName2": "[concat(parameters('Modupe_VirtualNet2'), '-Housegateway')]",
         "nsgName1": "[concat(parameters('Modupe_VirtualNet1'), '-1stnsg')]",
-        "nsgName2": "[concat(parameters('Modupe_VirtualNet2'), '-2ndnsg')]"
+        "nsgName2": "[concat(parameters('Modupe_VirtualNet2'), '-2ndnsg')]",
+        "storageAccountName1": "[concat(parameters('Modupe_VirtualNet1'), 'storage')]",
+        "storageAccountName2": "[concat(parameters('Modupe_VirtualNet2'), 'storage')]",
+        "nicName1": "[concat(parameters('Modupe_VirtualNet1'), 'nic')]",
+        "nicName2": "[concat(parameters('Modupe_VirtualNet2'), 'nic')]",
+        "vmName1": "[concat(parameters('Modupe_VirtualNet1'), 'VM')]",
+        "vmName2": "[concat(parameters('Modupe_VirtualNet2'), 'VM')]"
     },
     "resources": [
         {
+            // Virtual Network 1
             "name": "[parameters('Modupe_VirtualNet1')]",
             "type": "Microsoft.Network/virtualNetworks",
             "apiVersion": "2023-04-01",
@@ -94,6 +114,7 @@
             }
         },
         {
+            // VPN Gateway for Virtual Network 1
             "name": "[variables('vpnGatewayName1')]",
             "type": "Microsoft.Network/vpnGateways",
             "apiVersion": "2023-04-01",
@@ -121,6 +142,7 @@
             }
         },
         {
+            // Network Security Group for Virtual Network 1
             "name": "[variables('nsgName1')]",
             "type": "Microsoft.Network/networkSecurityGroups",
             "apiVersion": "2023-04-01",
@@ -145,6 +167,7 @@
             }
         },
         {
+            // Virtual Network 2
             "name": "[parameters('Modupe_VirtualNet2')]",
             "type": "Microsoft.Network/virtualNetworks",
             "apiVersion": "2023-04-01",
@@ -186,6 +209,7 @@
             }
         },
         {
+            // VPN Gateway for Virtual Network 2
             "name": "[variables('vpnGatewayName2')]",
             "type": "Microsoft.Network/vpnGateways",
             "apiVersion": "2023-04-01",
@@ -211,7 +235,250 @@
                     }
                 ]
             }
-        }
-    ]
-}
-      
+        },
+        {
+            // Network Security Group for Virtual Network 2
+            "name": "[variables('nsgName2')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2023-04-01",
+            "location": "[parameters('MVNet2_location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "AllowAllInbound",
+                        "properties": {
+                            "description": "Allow all inbound traffic",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    }
+               
+
+ ]
+            }
+        },
+        {
+            // Storage Account for Virtual Network 1
+            "name": "[variables('storageAccountName1')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2023-01-01",
+            "location": "[parameters('MVNet1_location')]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "supportsHttpsTrafficOnly": true
+            }
+        },
+        {
+            // Storage Account for Virtual Network 2
+            "name": "[variables('storageAccountName2')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2023-01-01",
+            "location": "[parameters('MVNet2_location')]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "supportsHttpsTrafficOnly": true
+            }
+        },
+        {
+            // Network Interface 1 for Virtual Network 1
+            "name": "[concat(variables('nicName1'), '1')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2023-04-01",
+            "location": "[parameters('MVNet1_location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet1'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName1'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('Modupe_VirtualNet1'), variables('Subnet1'))]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            // Network Interface 2 for Virtual Network 1
+            "name": "[concat(variables('nicName1'), '2')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2023-04-01",
+            "location": "[parameters('MVNet1_location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet1'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName1'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('Modupe_VirtualNet1'), variables('Subnet1'))]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            // Network Interface 1 for Virtual Network 2
+            "name": "[concat(variables('nicName2'), '1')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2023-04-01",
+            "location": "[parameters('MVNet2_location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet2'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName2'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('Modupe_VirtualNet2'), variables('Subnet1'))]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            // Network Interface 2 for Virtual Network 2
+            "name": "[concat(variables('nicName2'), '2')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2023-04-01",
+            "location": "[parameters('MVNet2_location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('Modupe_VirtualNet2'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName2'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('Modupe_VirtualNet2'), variables('Subnet1'))]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            // Virtual Machine 1 for Virtual Network 1
+            "name": "[concat(variables('vmName1'), '1')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2023-03-01",
+            "location": "[parameters('MVNet1_location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName1'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName1'), '1'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_DS1_v2"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2019-Datacenter",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "Standard_LRS"
+                        }
+                    }
+                },
+                "osProfile": {
+                    "computerName": "[concat(variables('vmName1'), '1')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName1'), '1'))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            // Virtual Machine 2 for Virtual Network 1
+            "name": "[concat(variables('vmName1'), '2')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2023-03-01",
+            "location": "[parameters('MVNet1_location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName1'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName1'), '2'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_DS1_v2"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2019-Datacenter",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "Standard_LRS"
+                        }
+                    }
+                },
+                "osProfile": {
+                    "computerName": "[concat(variables('vmName1'), '2')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName1'), '2'))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            // Virtual Machine 1 for Virtual Network 2
+            "name": "[concat(variables('vmName2'), '1')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2023-03-01",
+            "location": "[parameters('MVNet2_location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName2'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName2'), '1'))]"
+            ],
+        
